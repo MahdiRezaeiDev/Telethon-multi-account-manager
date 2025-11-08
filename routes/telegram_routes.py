@@ -185,43 +185,6 @@ def verify_password():
     return jsonify(result), (200 if 'status' in result else 400)
 
 
-def verify_password():
-    data = request.get_json()
-    phone = data.get('phone')
-    password = data.get('password')
-
-    if not all([phone, password]):
-        return jsonify({'error': 'phone و password الزامی هستند'}), 400
-
-    login_data = pending_logins.get(phone)
-    if not login_data:
-        return jsonify({'error': 'هیچ لاگین در حال انتظاری برای این شماره یافت نشد'}), 400
-
-    session_path = os.path.join(SESSIONS_DIR, f"{phone}.session")
-
-    async def complete_password_login():
-        client = TelegramClient(
-            session_path, login_data['api_id'], login_data['api_hash'])
-        await client.connect()
-        try:
-            await client.sign_in(password=password)
-            me = await client.get_me()
-            await client.disconnect()
-            pending_logins.pop(phone, None)
-            # Mark as logged in in DB
-            mark_logged_in(phone)
-            return {'status': 'logged_in', 'message': f"ورود با موفقیت انجام شد: {me.first_name}"}
-        except Exception as e:
-            await client.disconnect()
-            return {'error': str(e)}
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    result = loop.run_until_complete(complete_password_login())
-
-    return jsonify(result), (200 if 'status' in result else 400)
-
-
 # ---------- Get account info ----------
 @telegram_bp.route('/me', methods=['POST'])
 def get_me():
