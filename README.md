@@ -23,6 +23,6 @@ This project allows you to register multiple Telegram accounts, listen to group 
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/yourusername/telethon-multi-account-manager.git
+git clone https://github.com/MahdiRezaeiDev/telethon-multi-account-manager.git
 cd telethon-multi-account-manager
 ```
