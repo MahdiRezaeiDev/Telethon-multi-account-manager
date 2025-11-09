@@ -289,7 +289,16 @@ def group_members():
         await client.connect()
 
         try:
-            # ✅ Resolve group entity from link
+            # ✅ Get the logged-in account info
+            me = await client.get_me()
+            account_info = {
+                'id': me.id,
+                'full_name': f"{me.first_name or ''} {me.last_name or ''}".strip() or '(بدون نام)',
+                'username': me.username,
+                'phone': me.phone
+            }
+
+            # ✅ Resolve group entity
             entity = await client.get_entity(group_link)
 
             members_list = []
@@ -299,7 +308,6 @@ def group_members():
             while True:
                 participants = await client(GetParticipantsRequest(
                     channel=entity,
-                    # Or ChannelParticipantsFilterEmpty() if available
                     filter=ChannelParticipantsSearch(''),
                     offset=offset,
                     limit=limit,
@@ -316,7 +324,6 @@ def group_members():
                     full_name = f"{first_name} {last_name}".strip()
 
                     profile_photo_url = None
-
                     if user.photo:
                         filename = f"{user.id}.jpg"
                         path = os.path.join(PROFILE_DIR, filename)
@@ -333,7 +340,10 @@ def group_members():
 
                 offset += len(users)
 
-            return members_list
+            return {
+                'account': account_info,
+                'members': members_list
+            }
 
         finally:
             await client.disconnect()
@@ -342,13 +352,12 @@ def group_members():
     asyncio.set_event_loop(loop)
 
     try:
-        members = loop.run_until_complete(fetch_members())
-        return jsonify({'members': members})
+        result = loop.run_until_complete(fetch_members())
+        return jsonify(result)
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
-
 
 @telegram_bp.route('/listen-bot', methods=['GET'])
 def listen_bot():
@@ -415,16 +424,25 @@ def process_messages():
                          for line in message.splitlines() if line.strip()]
                 if not codes:
                     continue
-                
+
                 if account['telegram_id'] == msg['sender']:
                     continue
 
                 responses = []
                 for code in codes:
                     price_data = get_price_by_code(code, account['user_id'])
+
+                    if not price_data['is_bot_allowed']:
+                        continue
+
                     if price_data:
-                        responses.append(
-                            f"{code}: {price_data['price']} {price_data['brand']}")
+                        if price_data['without_price']:
+                            message = get_default_message(account['user_id'])
+                            responses.append(
+                                f"{code}: {message}")
+                        else:
+                            responses.append(
+                                f"{code}: {price_data['price']} {price_data['brand']}")
 
                 # Skip if no matching codes found
                 if not responses:

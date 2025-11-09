@@ -137,7 +137,7 @@ def get_price_by_code(code, user_id):
 
     # Step 2: Get price from prices table using the product_id
     cursor.execute(
-        "SELECT price, brand FROM products WHERE id = %s LIMIT 1", (product_id,))
+        "SELECT * FROM products WHERE id = %s LIMIT 1", (product_id,))
     price_data = cursor.fetchone()
 
     cursor.close()
@@ -236,3 +236,24 @@ async def notify_owner(client, account, code, price_data, msg, reason):
         await client.send_message(owner_id, message)
     except Exception as e:
         print(f"⚠️ Failed to notify owner: {e}")
+
+
+def get_default_message(user_id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT message
+        FROM default_messages
+        WHERE user_id = %s
+        LIMIT 1
+    """
+
+    cursor.execute(query, (user_id,))
+    message = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    # Return just the message string, or None if not found
+    return message['message'] if message else None
