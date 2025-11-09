@@ -1,9 +1,11 @@
 from flask import Flask
+import os
+import secrets
 from flask_cors import CORS
 from routes.telegram_routes import telegram_bp
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.getenv('FLASK_SECRET_KEY', secrets.token_hex(32))
 CORS(app)
 
 # ثبت بلوپرینت
